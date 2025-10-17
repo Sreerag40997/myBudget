@@ -1,6 +1,6 @@
 module github.com/sreerag/myBudget
 
-go 1.25.3
+go 1.25
 
 require gorm.io/driver/mysql v1.6.0
 
