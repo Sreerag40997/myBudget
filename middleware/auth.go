@@ -39,15 +39,20 @@ func AuthRequired() gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
 			return
 		}
 
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if ok {
-			c.Set("user_id", uint(claims["user_id"].(float64)))
-			c.Set("email", claims["email"].(string))
+		if claims, ok := token.Claims.(jwt.MapClaims); ok {
+			if userID, ok := claims["user_id"].(float64); ok {
+				c.Set("user_id", uint(userID))
+			}
+			if email, ok := claims["email"].(string); ok {
+				c.Set("email", email)
+			}
 		}
+
+		c.Set("token", tokenStr)
 
 		c.Next()
 	}

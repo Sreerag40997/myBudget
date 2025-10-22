@@ -23,6 +23,7 @@ func SetupRouter() *gin.Engine {
 		api.POST("/register", controllers.Register)      // /api/register
 		api.POST("/login", controllers.Login)            // /api/login
 		api.POST("/admin/login", controllers.AdminLogin) // /api/admin/login
+		api.POST("/logout", middleware.AuthRequired(), controllers.Logout)
 
 		api.GET("/profile", middleware.AuthRequired(), controllers.GetProfile)
 		api.PUT("/profile", middleware.AuthRequired(), controllers.UpdateProfile)

@@ -219,3 +219,13 @@ func UpdateProfile(c *gin.Context) {
 		},
 	})
 }
+
+func Logout(c *gin.Context) {
+	// Optionally, get user ID from context if needed
+	userID := c.GetUint("user_id")
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Logout successful",
+		"user_id": userID,
+	})
+}
