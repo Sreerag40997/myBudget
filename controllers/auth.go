@@ -11,10 +11,12 @@ import (
 )
 
 type RegisterInput struct {
-	Name     string `json:"name" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
-	Role     int    `json:"role"`
+	Name         string `json:"name" binding:"required"`
+	Email        string `json:"email" binding:"required,email"`
+	Password     string `json:"password" binding:"required,min=6"`
+	Phone        string `json:"phone,omitempty"`
+	ProfileImage string `json:"profile_image,omitempty"`
+	Role         int    `json:"role"`
 }
 
 type LoginInput struct {
@@ -42,10 +44,12 @@ func Register(c *gin.Context) {
 	}
 
 	user := models.User{
-		Name:     input.Name,
-		Email:    input.Email,
-		Password: string(hashed),
-		Role:     input.Role,
+		Name:         input.Name,
+		Email:        input.Email,
+		Password:     string(hashed),
+		Phone:        input.Phone,
+		ProfileImage: input.ProfileImage,
+		Role:         input.Role,
 	}
 
 	if err := config.DB.Create(&user).Error; err != nil {
@@ -62,10 +66,12 @@ func Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Registration successful",
 		"user": gin.H{
-			"id":    user.ID,
-			"name":  user.Name,
-			"email": user.Email,
-			"role":  user.Role,
+			"id":            user.ID,
+			"name":          user.Name,
+			"email":         user.Email,
+			"phone":         user.Phone,
+			"profile_image": user.ProfileImage,
+			"role":          user.Role,
 		},
 		"token": token,
 	})
@@ -98,10 +104,12 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Login successful",
 		"user": gin.H{
-			"id":    user.ID,
-			"name":  user.Name,
-			"email": user.Email,
-			"role":  user.Role,
+			"id":            user.ID,
+			"name":          user.Name,
+			"email":         user.Email,
+			"phone":         user.Phone,
+			"profile_image": user.ProfileImage,
+			"role":          user.Role,
 		},
 		"token": token,
 	})
@@ -120,19 +128,16 @@ func AdminLogin(c *gin.Context) {
 		return
 	}
 
-	// Compare password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
 
-	// Check if admin
 	if user.Role != 1 {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied. Admins only."})
 		return
 	}
 
-	// Generate JWT token
 	token, err := utils.GenerateToken(user.ID, user.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not generate token"})
@@ -142,10 +147,12 @@ func AdminLogin(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Admin login successful",
 		"user": gin.H{
-			"id":    user.ID,
-			"name":  user.Name,
-			"email": user.Email,
-			"role":  user.Role,
+			"id":            user.ID,
+			"name":          user.Name,
+			"email":         user.Email,
+			"phone":         user.Phone,
+			"profile_image": user.ProfileImage,
+			"role":          user.Role,
 		},
 		"token": token,
 	})
@@ -160,7 +167,16 @@ func GetProfile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": user})
+	c.JSON(http.StatusOK, gin.H{
+		"user": gin.H{
+			"id":            user.ID,
+			"name":          user.Name,
+			"email":         user.Email,
+			"phone":         user.Phone,
+			"profile_image": user.ProfileImage,
+			"role":          user.Role,
+		},
+	})
 }
 
 func UpdateProfile(c *gin.Context) {
@@ -192,5 +208,14 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": user})
+	c.JSON(http.StatusOK, gin.H{
+		"user": gin.H{
+			"id":            user.ID,
+			"name":          user.Name,
+			"email":         user.Email,
+			"phone":         user.Phone,
+			"profile_image": user.ProfileImage,
+			"role":          user.Role,
+		},
+	})
 }

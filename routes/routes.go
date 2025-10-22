@@ -9,6 +9,7 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
+	// Serve admin login page (GET)
 	r.GET("/admin/login", func(c *gin.Context) {
 		c.File("./templates/admin-login.html")
 	})
@@ -16,14 +17,15 @@ func SetupRouter() *gin.Engine {
 		c.File("./templates/admin/dashboard.html")
 	})
 
+	// API routes
 	api := r.Group("/api")
 	{
-		api.POST("/register", controllers.Register)
-		api.POST("/login", controllers.Login)
+		api.POST("/register", controllers.Register)      // /api/register
+		api.POST("/login", controllers.Login)            // /api/login
+		api.POST("/admin/login", controllers.AdminLogin) // /api/admin/login
+
 		api.GET("/profile", middleware.AuthRequired(), controllers.GetProfile)
 		api.PUT("/profile", middleware.AuthRequired(), controllers.UpdateProfile)
-
-		api.POST("/admin/login", controllers.AdminLogin)
 
 		admin := api.Group("/admin")
 		admin.Use(middleware.AdminRequired())
