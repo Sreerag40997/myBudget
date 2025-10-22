@@ -7,6 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sreerag/myBudget/config"
+	"github.com/sreerag/myBudget/models"
 )
 
 func AuthRequired() gin.HandlerFunc {
@@ -35,6 +37,7 @@ func AuthRequired() gin.HandlerFunc {
 			}
 			return []byte(secret), nil
 		})
+
 		if err != nil || !token.Valid {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
 			return
@@ -44,6 +47,29 @@ func AuthRequired() gin.HandlerFunc {
 		if ok {
 			c.Set("user_id", uint(claims["user_id"].(float64)))
 			c.Set("email", claims["email"].(string))
+		}
+
+		c.Next()
+	}
+}
+
+func AdminRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		AuthRequired()(c)
+		if c.IsAborted() {
+			return
+		}
+
+		userID := c.GetUint("user_id")
+		var user models.User
+		if err := config.DB.First(&user, userID).Error; err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
+			return
+		}
+
+		if user.Role != 1 {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Admins only"})
+			return
 		}
 
 		c.Next()

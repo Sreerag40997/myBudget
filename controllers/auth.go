@@ -14,6 +14,7 @@ type RegisterInput struct {
 	Name     string `json:"name" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
+	Role     int    `json:"role"`
 }
 
 type LoginInput struct {
@@ -44,6 +45,7 @@ func Register(c *gin.Context) {
 		Name:     input.Name,
 		Email:    input.Email,
 		Password: string(hashed),
+		Role:     input.Role,
 	}
 
 	if err := config.DB.Create(&user).Error; err != nil {
@@ -58,7 +60,13 @@ func Register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"user":  gin.H{"id": user.ID, "email": user.Email, "name": user.Name},
+		"message": "Registration successful",
+		"user": gin.H{
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+			"role":  user.Role,
+		},
 		"token": token,
 	})
 }
@@ -88,7 +96,101 @@ func Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"user":  gin.H{"id": user.ID, "email": user.Email, "name": user.Name},
+		"message": "Login successful",
+		"user": gin.H{
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+			"role":  user.Role,
+		},
 		"token": token,
 	})
+}
+
+func AdminLogin(c *gin.Context) {
+	var input LoginInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var user models.User
+	if err := config.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		return
+	}
+
+	// Compare password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		return
+	}
+
+	// Check if admin
+	if user.Role != 1 {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied. Admins only."})
+		return
+	}
+
+	// Generate JWT token
+	token, err := utils.GenerateToken(user.ID, user.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not generate token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Admin login successful",
+		"user": gin.H{
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+			"role":  user.Role,
+		},
+		"token": token,
+	})
+}
+
+func GetProfile(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	var user models.User
+	if err := config.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": user})
+}
+
+func UpdateProfile(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	var input struct {
+		Name         string `json:"name"`
+		Phone        string `json:"phone"`
+		ProfileImage string `json:"profile_image"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var user models.User
+	if err := config.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	user.Name = input.Name
+	user.Phone = input.Phone
+	user.ProfileImage = input.ProfileImage
+
+	if err := config.DB.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": user})
 }

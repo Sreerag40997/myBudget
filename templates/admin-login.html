@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: linear-gradient(180deg,#f8fafc 0%, #eef2ff 100%);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center px-4">
+  <main class="w-full max-w-md bg-white/90 backdrop-blur-md rounded-2xl shadow-xl p-8 sm:p-10">
+    <header class="flex items-center gap-3 mb-6">
+      <div class="h-12 w-12 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-xl font-bold">A</div>
+      <div>
+        <h1 class="text-2xl font-semibold">Admin Sign in</h1>
+        <p class="text-sm text-slate-500">Enter your credentials to continue</p>
+      </div>
+    </header>
+
+    <form id="loginForm" class="space-y-5" novalidate>
+      <div>
+        <label for="email" class="block text-sm font-medium text-slate-700">Email address</label>
+        <div class="mt-1">
+          <input id="email" name="email" type="email" required autocomplete="email"
+                 class="w-full rounded-lg border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500"
+                 placeholder="admin@example.com" />
+        </div>
+        <p id="emailError" class="mt-1 text-xs text-red-600 hidden">Please enter a valid email.</p>
+      </div>
+
+      <div>
+        <label for="password" class="block text-sm font-medium text-slate-700">Password</label>
+        <div class="mt-1 relative">
+          <input id="password" name="password" type="password" required minlength="6" autocomplete="current-password"
+                 class="w-full rounded-lg border border-slate-200 px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500"
+                 placeholder="••••••••" />
+          <button type="button" id="togglePassword" aria-pressed="false" class="absolute inset-y-0 right-0 px-3 flex items-center text-sm">
+            <span class="sr-only">Show password</span>
+            <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.269-2.943-9.543-7a9.958 9.958 0 012.223-3.552M3 3l18 18" />
+            </svg>
+          </button>
+        </div>
+        <p id="pwdError" class="mt-1 text-xs text-red-600 hidden">Password must be at least 6 characters.</p>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <label class="flex items-center gap-2 text-sm">
+          <input id="remember" name="remember" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+          <span class="text-slate-600">Remember me</span>
+        </label>
+        <a href="#" class="text-sm font-medium text-indigo-600 hover:underline">Forgot password?</a>
+      </div>
+
+      <div>
+        <button id="submitBtn" type="submit" class="w-full inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-white font-semibold shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+          Sign in
+        </button>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    (function(){
+      const form = document.getElementById('loginForm');
+      const email = document.getElementById('email');
+      const pwd = document.getElementById('password');
+      const emailError = document.getElementById('emailError');
+      const pwdError = document.getElementById('pwdError');
+      const toggle = document.getElementById('togglePassword');
+      const eyeOpen = document.getElementById('eyeOpen');
+      const eyeClosed = document.getElementById('eyeClosed');
+
+      toggle.addEventListener('click', () => {
+        const isPwd = pwd.getAttribute('type') === 'password';
+        pwd.setAttribute('type', isPwd ? 'text' : 'password');
+        toggle.setAttribute('aria-pressed', String(isPwd));
+        eyeOpen.classList.toggle('hidden');
+        eyeClosed.classList.toggle('hidden');
+      });
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        let valid = true;
+
+        if(!email.value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)){
+          emailError.classList.remove('hidden');
+          valid = false;
+        } else emailError.classList.add('hidden');
+
+        if(!pwd.value || pwd.value.length < 6){
+          pwdError.classList.remove('hidden');
+          valid = false;
+        } else pwdError.classList.add('hidden');
+
+        if(!valid) return;
+
+        try {
+          const response = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.value, password: pwd.value })
+          });
+
+          const data = await response.json();
+
+          if(response.ok){
+            localStorage.setItem('admin_token', data.token);
+            localStorage.setItem('admin_user', JSON.stringify(data.user));
+            window.location.href = '/admin/dashboard';
+          } else {
+            alert(data.error || 'Login failed');
+          }
+        } catch(err){
+          console.error(err);
+          alert('Something went wrong. Try again.');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

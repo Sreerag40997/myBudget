@@ -9,18 +9,27 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
+	r.GET("/admin/login", func(c *gin.Context) {
+		c.File("./templates/admin-login.html")
+	})
+	r.GET("/admin/dashboard", func(c *gin.Context) {
+		c.File("./templates/admin/dashboard.html")
+	})
+
 	api := r.Group("/api")
 	{
 		api.POST("/register", controllers.Register)
 		api.POST("/login", controllers.Login)
+		api.GET("/profile", middleware.AuthRequired(), controllers.GetProfile)
+		api.PUT("/profile", middleware.AuthRequired(), controllers.UpdateProfile)
 
-		protected := api.Group("/")
-		protected.Use(middleware.AuthRequired())
+		api.POST("/admin/login", controllers.AdminLogin)
+
+		admin := api.Group("/admin")
+		admin.Use(middleware.AdminRequired())
 		{
-			protected.GET("/profile", func(c *gin.Context) {
-				uid := c.GetUint("user_id")
-				email := c.GetString("email")
-				c.JSON(200, gin.H{"user_id": uid, "email": email})
+			admin.GET("/dashboard", func(c *gin.Context) {
+				c.JSON(200, gin.H{"message": "Welcome Admin"})
 			})
 		}
 	}
